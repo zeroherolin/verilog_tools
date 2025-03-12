@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>std::complex<float> Converter</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+        .converter {
+            border: 1px solid #ccc;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        input[type="text"] {
+            width: 300px;
+            padding: 5px;
+            margin: 5px;
+        }
+        button {
+            padding: 8px 15px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        .result {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #f0f0f0;
+        }
+        .error {
+            color: red;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>std::complex&lt;float&gt; Converter</h1>
+
+    <div class="converter">
+        <h2>Complex to Hexadecimal</h2>
+        <input type="text" id="complexInput" placeholder="e.g., 3.5+2.1i">
+        <button onclick="convertComplexToHex()">Convert</button>
+        <div id="hexResult" class="result"></div>
+        <div id="complexError" class="error"></div>
+    </div>
+
+    <div class="converter">
+        <h2>Hexadecimal to Complex</h2>
+        <input type="text" id="hexInput" placeholder="e.g., 40600000 40000000">
+        <button onclick="convertHexToComplex()">Convert</button>
+        <div id="complexResult" class="result"></div>
+        <div id="hexError" class="error"></div>
+    </div>
+
+    <script>
+        function floatToHex(f) {
+            const buffer = new ArrayBuffer(4);
+            const view = new DataView(buffer);
+            view.setFloat32(0, f, false);
+            return view.getUint32(0, false)
+                      .toString(16)
+                      .padStart(8, '0')
+                      .toUpperCase();
+        }
+
+        function hexToFloat(hexStr) {
+            hexStr = hexStr.replace(/^0x/, '');
+            if (hexStr.length !== 8) throw new Error('Invalid hex length');
+            
+            const buffer = new ArrayBuffer(4);
+            const view = new DataView(buffer);
+            view.setUint32(0, parseInt(hexStr, 16), false);
+            return view.getFloat32(0, false);
+        }
+
+        function parseComplex(input) {
+            input = input.replace(/\s+/g, '');
+            if (!input) throw new Error('Empty input');
+
+            let real = 0, imag = 0;
+            
+            // Handle pure real or pure imaginary
+            if (!input.includes('i')) {
+                real = parseFloat(input);
+                if (isNaN(real)) throw new Error('Invalid number');
+                return { real, imag };
+            }
+
+            // Handle pure imaginary
+            if (input === 'i') return { real: 0, imag: 1 };
+            if (input === '-i') return { real: 0, imag: -1 };
+            if (/^[+-]?[\d.]+i$/.test(input)) {
+                imag = parseFloat(input.replace('i', ''));
+                return { real: 0, imag: isNaN(imag) ? 1 : imag };
+            }
+
+            // Split real and imaginary parts
+            const parts = input.split(/(?=[+-])/);
+            for (const part of parts) {
+                if (part.endsWith('i')) {
+                    const value = part.replace('i', '');
+                    imag += parseFloat(value === '' ? (part[0] === '-' ? -1 : 1) : value);
+                } else {
+                    real += parseFloat(part);
+                }
+            }
+
+            return { real, imag };
+        }
+
+        function formatComplex(real, imag) {
+            let result = [];
+            if (real !== 0 || imag === 0) result.push(real % 1 === 0 ? real : real.toFixed(3));
+            if (imag !== 0) {
+                const absImag = Math.abs(imag);
+                const sign = imag > 0 ? '+' : '-';
+                const value = absImag === 1 ? '' : absImag % 1 === 0 ? absImag : absImag.toFixed(3);
+                result.push(`${sign}${value}i`);
+            }
+            return result.join('').replace(/\+-/g, '-');
+        }
+
+        function convertComplexToHex() {
+            const input = document.getElementById('complexInput').value;
+            const resultDiv = document.getElementById('hexResult');
+            const errorDiv = document.getElementById('complexError');
+            
+            errorDiv.textContent = '';
+            resultDiv.textContent = '';
+
+            try {
+                const { real, imag } = parseComplex(input);
+                resultDiv.textContent = `Real: 0x${floatToHex(real)}, Imag: 0x${floatToHex(imag)}`;
+            } catch (e) {
+                errorDiv.textContent = e.message;
+            }
+        }
+
+        function convertHexToComplex() {
+            const input = document.getElementById('hexInput').value.trim();
+            const resultDiv = document.getElementById('complexResult');
+            const errorDiv = document.getElementById('hexError');
+            
+            errorDiv.textContent = '';
+            resultDiv.textContent = '';
+
+            try {
+                const hexParts = input.split(/\s+/);
+                if (hexParts.length !== 2) throw new Error('Enter two hex values separated by space');
+                
+                const real = hexToFloat(hexParts[0]);
+                const imag = hexToFloat(hexParts[1]);
+                resultDiv.textContent = formatComplex(real, imag);
+            } catch (e) {
+                errorDiv.textContent = e.message;
+            }
+        }
+    </script>
+</body>
+</html>
+
