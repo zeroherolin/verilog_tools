@@ -2,5 +2,5 @@
 
 Introducing some practical tools for verilog & hls.
 
-...
+Updating...
 
